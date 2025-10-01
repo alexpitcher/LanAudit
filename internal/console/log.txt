@@ -1,0 +1,22 @@
+2025/10/01 13:33:38.499944 [INFO] ProbePort start path=/dev/null bauds=[9600] timeout=800ms
+2025/10/01 13:33:38.500908 [DEBUG] probing /dev/null at 9600 baud
+2025/10/01 13:33:38.501057 [ERROR] serial open failed /dev/null baud=9600: Invalid serial port: error getting term settings: operation not supported by device
+2025/10/01 13:33:38.501077 [WARN] probe failed for /dev/null: no response at any baud rate ([9600])
+2025/10/01 13:33:38.501122 [INFO] ProbePort start path=/dev/nonexistent_tty_12345 bauds=[9600 115200] timeout=800ms
+2025/10/01 13:33:38.501132 [DEBUG] probing /dev/nonexistent_tty_12345 at 9600 baud
+2025/10/01 13:33:38.501155 [ERROR] serial open failed /dev/nonexistent_tty_12345 baud=9600: no such file or directory
+2025/10/01 13:33:38.501159 [DEBUG] probing /dev/nonexistent_tty_12345 at 115200 baud
+2025/10/01 13:33:38.501167 [ERROR] serial open failed /dev/nonexistent_tty_12345 baud=115200: no such file or directory
+2025/10/01 13:33:38.501172 [WARN] probe failed for /dev/nonexistent_tty_12345: no response at any baud rate ([9600 115200])
+2025/10/01 13:33:38.501361 [ERROR] serial open failed /dev/null baud=9600: Invalid serial port: error getting term settings: operation not supported by device
+2025/10/01 13:40:45.102683 [INFO] ProbePort start path=/dev/null bauds=[9600] timeout=800ms
+2025/10/01 13:40:45.103410 [DEBUG] probing /dev/null at 9600 baud
+2025/10/01 13:40:45.103468 [ERROR] serial open failed /dev/null baud=9600: Invalid serial port: error getting term settings: operation not supported by device
+2025/10/01 13:40:45.103475 [WARN] probe failed for /dev/null: no response at any baud rate ([9600])
+2025/10/01 13:40:45.103498 [INFO] ProbePort start path=/dev/nonexistent_tty_12345 bauds=[9600 115200] timeout=800ms
+2025/10/01 13:40:45.103503 [DEBUG] probing /dev/nonexistent_tty_12345 at 9600 baud
+2025/10/01 13:40:45.103512 [ERROR] serial open failed /dev/nonexistent_tty_12345 baud=9600: no such file or directory
+2025/10/01 13:40:45.103516 [DEBUG] probing /dev/nonexistent_tty_12345 at 115200 baud
+2025/10/01 13:40:45.103523 [ERROR] serial open failed /dev/nonexistent_tty_12345 baud=115200: no such file or directory
+2025/10/01 13:40:45.103527 [WARN] probe failed for /dev/nonexistent_tty_12345: no response at any baud rate ([9600 115200])
+2025/10/01 13:40:45.103584 [ERROR] serial open failed /dev/null baud=9600: Invalid serial port: error getting term settings: operation not supported by device

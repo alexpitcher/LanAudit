@@ -1,0 +1,9 @@
+--- banner ---
+User Access Verification
+Username:
+--- prompt ---
+Switch#
+--- probe ---
+Cisco IOS Software, C2960-LANBASEK9-M, Version 15.2(2)E7
+Model number                : WS-C2960-24TT-L
+Configuration register is 0xF

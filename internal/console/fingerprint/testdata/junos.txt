@@ -1,0 +1,9 @@
+--- banner ---
+Amnesiac (ttyu0)
+login:
+--- prompt ---
+lab@router>
+--- probe ---
+Hostname: router
+Model: mx204
+JUNOS Base OS boot [20.4R3]

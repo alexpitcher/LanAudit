@@ -1,0 +1,56 @@
+# GoReleaser configuration for LanAudit
+# To use: install goreleaser and run `goreleaser release --snapshot --clean`
+# For actual releases, this would be triggered by GitHub Actions on tags
+
+project_name: lanaudit
+
+before:
+  hooks:
+    - go mod tidy
+    - go test ./...
+
+builds:
+  - id: lanaudit
+    main: ./cmd/lanaudit
+    binary: lanaudit
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+
+archives:
+  - id: lanaudit-archive
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+# Disabled by default - enable when ready for releases
+release:
+  draft: true
+  prerelease: auto

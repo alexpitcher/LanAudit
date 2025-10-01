@@ -1,0 +1,8 @@
+--- banner ---
+PA-220 login:
+--- prompt ---
+admin@PA-220>
+--- probe ---
+Hostname: PA-220
+model: PA-220
+sw-version: 10.2.3

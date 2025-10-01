@@ -1,0 +1,5 @@
+--- banner ---
+GNU GRUB version 2.06
+--- prompt ---
+
+--- probe ---

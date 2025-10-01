@@ -1,0 +1,138 @@
+2025/10/01 13:33:38.750388 [DEBUG] fingerprint.Analyze len(rx)=42 lastPrompt="Switch#"
+2025/10/01 13:33:38.750577 [DEBUG] Analyze stage=prompt candidates=5
+2025/10/01 13:33:38.750602 [INFO] Finalize result vendor=Cisco os=IOS model=WS-C2960-24TT-L confidence=0.90
+2025/10/01 13:33:38.750810 [DEBUG] fingerprint.Analyze len(rx)=67 lastPrompt="ciscoasa#"
+2025/10/01 13:33:38.750834 [DEBUG] Analyze stage=prompt candidates=6
+2025/10/01 13:33:38.750866 [INFO] Finalize result vendor=Cisco os=ASA model=ASA5515, 8192 MB RAM, CPU Atom C2000 confidence=0.90
+2025/10/01 13:33:38.751182 [DEBUG] fingerprint.Analyze len(rx)=53 lastPrompt="switch#"
+2025/10/01 13:33:38.751215 [DEBUG] Analyze stage=prompt candidates=6
+2025/10/01 13:33:38.751226 [INFO] Finalize result vendor=Cisco os=NX-OS model=cisco Nexus 93180YC-FX Chassis confidence=0.90
+2025/10/01 13:33:38.753052 [DEBUG] fingerprint.Analyze len(rx)=59 lastPrompt="RP/0/RSP0/CPU0:router#"
+2025/10/01 13:33:38.753094 [DEBUG] Analyze stage=prompt candidates=4
+2025/10/01 13:33:38.753107 [INFO] Finalize result vendor=Cisco os=IOS-XR model=7.3.1 confidence=0.90
+2025/10/01 13:33:38.753327 [DEBUG] fingerprint.Analyze len(rx)=26 lastPrompt="CXSwitch#"
+2025/10/01 13:33:38.753346 [DEBUG] Analyze stage=prompt candidates=5
+2025/10/01 13:33:38.753356 [INFO] Finalize result vendor=Aruba os=AOS-CX model=Aruba 8320 Switch Series confidence=0.90
+2025/10/01 13:33:38.753681 [DEBUG] fingerprint.Analyze len(rx)=30 lastPrompt="Aruba2930F#"
+2025/10/01 13:33:38.753716 [DEBUG] Analyze stage=prompt candidates=6
+2025/10/01 13:33:38.753727 [INFO] Finalize result vendor=Aruba os=AOS-S model=Aruba 2930F 16.10 confidence=0.90
+2025/10/01 13:33:38.753898 [DEBUG] fingerprint.Analyze len(rx)=35 lastPrompt="lab@router>"
+2025/10/01 13:33:38.753917 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:33:38.753925 [INFO] Finalize result vendor=Juniper os=JUNOS model=mx204 confidence=0.90
+2025/10/01 13:33:38.754102 [DEBUG] fingerprint.Analyze len(rx)=54 lastPrompt="[admin@MikroTik] >"
+2025/10/01 13:33:38.754128 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:33:38.754139 [INFO] Finalize result vendor=MikroTik os=RouterOS model=CRS328-24P-4S+ confidence=0.90
+2025/10/01 13:33:38.756018 [DEBUG] fingerprint.Analyze len(rx)=36 lastPrompt="ubnt@EdgeRouter:~$"
+2025/10/01 13:33:38.756057 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:33:38.756071 [INFO] Finalize result vendor=Ubiquiti os=EdgeOS model=EdgeRouter confidence=0.90
+2025/10/01 13:33:38.756263 [DEBUG] fingerprint.Analyze len(rx)=29 lastPrompt="FGT60E #"
+2025/10/01 13:33:38.756282 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:33:38.756290 [INFO] Finalize result vendor=Fortinet os=FortiOS model=FortiGate-60E v6.4.9,build2044 confidence=1.00
+2025/10/01 13:33:38.756492 [DEBUG] fingerprint.Analyze len(rx)=27 lastPrompt="admin@PA-220>"
+2025/10/01 13:33:38.756511 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:33:38.756518 [INFO] Finalize result vendor=PaloAlto os=PAN-OS model=PA-220 confidence=0.90
+2025/10/01 13:33:38.757417 [DEBUG] fingerprint.Analyze len(rx)=51 lastPrompt="<HUAWEI>"
+2025/10/01 13:33:38.757441 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:33:38.757452 [INFO] Finalize result vendor=Huawei os=VRP model=S5720-28X-SI-AC confidence=0.90
+2025/10/01 13:33:38.757624 [DEBUG] fingerprint.Analyze len(rx)=33 lastPrompt="<HP>"
+2025/10/01 13:33:38.757640 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:33:38.757648 [INFO] Finalize result vendor=HPE os=Comware model=HPE 5130-24G-PoE+-4SFP+ EI confidence=0.90
+2025/10/01 13:33:38.757713 [DEBUG] fingerprint.Analyze len(rx)=47 lastPrompt="OS10Switch#"
+2025/10/01 13:33:38.757736 [DEBUG] Analyze stage=prompt candidates=5
+2025/10/01 13:33:38.757743 [INFO] Finalize result vendor=Dell os=OS10 model=Dell S5248F-ON confidence=0.90
+2025/10/01 13:33:38.757985 [DEBUG] fingerprint.Analyze len(rx)=40 lastPrompt="ICX7250-48P#"
+2025/10/01 13:33:38.758003 [DEBUG] Analyze stage=prompt candidates=6
+2025/10/01 13:33:38.758013 [INFO] Finalize result vendor=Brocade/Extreme os=FastIron model=ICX7250-48P confidence=0.90
+2025/10/01 13:33:38.758100 [DEBUG] fingerprint.Analyze len(rx)=24 lastPrompt="vyos@vyos:~$"
+2025/10/01 13:33:38.758117 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:33:38.758124 [INFO] Finalize result vendor=VyOS os=VyOS model=1.4-rolling-20240220 confidence=0.90
+2025/10/01 13:33:38.758205 [DEBUG] fingerprint.Analyze len(rx)=31 lastPrompt="root@OpenWrt:~#"
+2025/10/01 13:33:38.758224 [DEBUG] Analyze stage=prompt candidates=4
+2025/10/01 13:33:38.758231 [INFO] Finalize result vendor=OpenWrt os=OpenWrt model=OpenWrt 22.03.0 confidence=0.90
+2025/10/01 13:33:38.758394 [DEBUG] fingerprint.Analyze len(rx)=30 lastPrompt="root@pfSense:~ #"
+2025/10/01 13:33:38.758420 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:33:38.758427 [INFO] Finalize result vendor=pfSense/OPNsense os=pfSense model=pfSense confidence=0.90
+2025/10/01 13:33:38.758573 [DEBUG] fingerprint.Analyze len(rx)=31 lastPrompt="=>"
+2025/10/01 13:33:38.758582 [DEBUG] Analyze stage=bootloader candidates=2
+2025/10/01 13:33:38.758588 [INFO] Finalize result vendor=Bootloader os=U-Boot model=2023.01 confidence=0.95
+2025/10/01 13:33:38.758658 [DEBUG] fingerprint.Analyze len(rx)=100 lastPrompt="rommon 1 >"
+2025/10/01 13:33:38.758684 [DEBUG] Analyze stage=bootloader candidates=2
+2025/10/01 13:33:38.758690 [INFO] Finalize result vendor=Bootloader os=ROMMON model= confidence=0.95
+2025/10/01 13:33:38.758771 [DEBUG] fingerprint.Analyze len(rx)=21 lastPrompt=""
+2025/10/01 13:33:38.758789 [DEBUG] Analyze stage=bootloader candidates=1
+2025/10/01 13:33:38.758795 [INFO] Finalize result vendor=Bootloader os=GRUB model= confidence=0.60
+2025/10/01 13:33:38.758878 [DEBUG] fingerprint.Analyze len(rx)=30 lastPrompt="login:"
+2025/10/01 13:33:38.758897 [DEBUG] Analyze stage=login candidates=0
+2025/10/01 13:33:38.758900 [WARN] Finalize: no candidates for provided input
+2025/10/01 13:33:38.759094 [DEBUG] fingerprint.Analyze len(rx)=38 lastPrompt="user@host:~$"
+2025/10/01 13:33:38.759114 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:33:38.759120 [INFO] Finalize result vendor=Linux/BusyBox os=Linux model= confidence=0.40
+2025/10/01 13:40:44.844654 [DEBUG] fingerprint.Analyze len(rx)=42 lastPrompt="Switch#"
+2025/10/01 13:40:44.845316 [DEBUG] Analyze stage=prompt candidates=5
+2025/10/01 13:40:44.845339 [INFO] Finalize result vendor=Cisco os=IOS model=WS-C2960-24TT-L confidence=0.90
+2025/10/01 13:40:44.845993 [DEBUG] fingerprint.Analyze len(rx)=67 lastPrompt="ciscoasa#"
+2025/10/01 13:40:44.846020 [DEBUG] Analyze stage=prompt candidates=6
+2025/10/01 13:40:44.846061 [INFO] Finalize result vendor=Cisco os=ASA model=ASA5515, 8192 MB RAM, CPU Atom C2000 confidence=0.90
+2025/10/01 13:40:44.846316 [DEBUG] fingerprint.Analyze len(rx)=53 lastPrompt="switch#"
+2025/10/01 13:40:44.846335 [DEBUG] Analyze stage=prompt candidates=6
+2025/10/01 13:40:44.846345 [INFO] Finalize result vendor=Cisco os=NX-OS model=cisco Nexus 93180YC-FX Chassis confidence=0.90
+2025/10/01 13:40:44.846493 [DEBUG] fingerprint.Analyze len(rx)=59 lastPrompt="RP/0/RSP0/CPU0:router#"
+2025/10/01 13:40:44.846518 [DEBUG] Analyze stage=prompt candidates=4
+2025/10/01 13:40:44.846526 [INFO] Finalize result vendor=Cisco os=IOS-XR model=7.3.1 confidence=0.90
+2025/10/01 13:40:44.846663 [DEBUG] fingerprint.Analyze len(rx)=26 lastPrompt="CXSwitch#"
+2025/10/01 13:40:44.846678 [DEBUG] Analyze stage=prompt candidates=5
+2025/10/01 13:40:44.846686 [INFO] Finalize result vendor=Aruba os=AOS-CX model=Aruba 8320 Switch Series confidence=0.90
+2025/10/01 13:40:44.846923 [DEBUG] fingerprint.Analyze len(rx)=30 lastPrompt="Aruba2930F#"
+2025/10/01 13:40:44.846938 [DEBUG] Analyze stage=prompt candidates=6
+2025/10/01 13:40:44.846945 [INFO] Finalize result vendor=Aruba os=AOS-S model=Aruba 2930F 16.10 confidence=0.90
+2025/10/01 13:40:44.847086 [DEBUG] fingerprint.Analyze len(rx)=35 lastPrompt="lab@router>"
+2025/10/01 13:40:44.847103 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:40:44.847110 [INFO] Finalize result vendor=Juniper os=JUNOS model=mx204 confidence=0.90
+2025/10/01 13:40:44.847248 [DEBUG] fingerprint.Analyze len(rx)=54 lastPrompt="[admin@MikroTik] >"
+2025/10/01 13:40:44.847298 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:40:44.847310 [INFO] Finalize result vendor=MikroTik os=RouterOS model=CRS328-24P-4S+ confidence=0.90
+2025/10/01 13:40:44.847666 [DEBUG] fingerprint.Analyze len(rx)=36 lastPrompt="ubnt@EdgeRouter:~$"
+2025/10/01 13:40:44.847691 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:40:44.847698 [INFO] Finalize result vendor=Ubiquiti os=EdgeOS model=EdgeRouter confidence=0.90
+2025/10/01 13:40:44.847934 [DEBUG] fingerprint.Analyze len(rx)=29 lastPrompt="FGT60E #"
+2025/10/01 13:40:44.847953 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:40:44.847960 [INFO] Finalize result vendor=Fortinet os=FortiOS model=FortiGate-60E v6.4.9,build2044 confidence=1.00
+2025/10/01 13:40:44.849066 [DEBUG] fingerprint.Analyze len(rx)=27 lastPrompt="admin@PA-220>"
+2025/10/01 13:40:44.849105 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:40:44.849120 [INFO] Finalize result vendor=PaloAlto os=PAN-OS model=PA-220 confidence=0.90
+2025/10/01 13:40:44.849401 [DEBUG] fingerprint.Analyze len(rx)=51 lastPrompt="<HUAWEI>"
+2025/10/01 13:40:44.849428 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:40:44.849440 [INFO] Finalize result vendor=Huawei os=VRP model=S5720-28X-SI-AC confidence=0.90
+2025/10/01 13:40:44.849619 [DEBUG] fingerprint.Analyze len(rx)=33 lastPrompt="<HP>"
+2025/10/01 13:40:44.849637 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:40:44.849648 [INFO] Finalize result vendor=HPE os=Comware model=HPE 5130-24G-PoE+-4SFP+ EI confidence=0.90
+2025/10/01 13:40:44.849731 [DEBUG] fingerprint.Analyze len(rx)=47 lastPrompt="OS10Switch#"
+2025/10/01 13:40:44.849755 [DEBUG] Analyze stage=prompt candidates=5
+2025/10/01 13:40:44.849763 [INFO] Finalize result vendor=Dell os=OS10 model=Dell S5248F-ON confidence=0.90
+2025/10/01 13:40:44.850020 [DEBUG] fingerprint.Analyze len(rx)=40 lastPrompt="ICX7250-48P#"
+2025/10/01 13:40:44.850046 [DEBUG] Analyze stage=prompt candidates=6
+2025/10/01 13:40:44.850064 [INFO] Finalize result vendor=Brocade/Extreme os=FastIron model=ICX7250-48P confidence=0.90
+2025/10/01 13:40:44.850136 [DEBUG] fingerprint.Analyze len(rx)=24 lastPrompt="vyos@vyos:~$"
+2025/10/01 13:40:44.850154 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:40:44.850174 [INFO] Finalize result vendor=VyOS os=VyOS model=1.4-rolling-20240220 confidence=0.90
+2025/10/01 13:40:44.850250 [DEBUG] fingerprint.Analyze len(rx)=31 lastPrompt="root@OpenWrt:~#"
+2025/10/01 13:40:44.850271 [DEBUG] Analyze stage=prompt candidates=4
+2025/10/01 13:40:44.850278 [INFO] Finalize result vendor=OpenWrt os=OpenWrt model=OpenWrt 22.03.0 confidence=0.90
+2025/10/01 13:40:44.850432 [DEBUG] fingerprint.Analyze len(rx)=30 lastPrompt="root@pfSense:~ #"
+2025/10/01 13:40:44.850454 [DEBUG] Analyze stage=prompt candidates=3
+2025/10/01 13:40:44.850460 [INFO] Finalize result vendor=pfSense/OPNsense os=pfSense model=pfSense confidence=0.90
+2025/10/01 13:40:44.850593 [DEBUG] fingerprint.Analyze len(rx)=31 lastPrompt="=>"
+2025/10/01 13:40:44.850602 [DEBUG] Analyze stage=bootloader candidates=2
+2025/10/01 13:40:44.850609 [INFO] Finalize result vendor=Bootloader os=U-Boot model=2023.01 confidence=0.95
+2025/10/01 13:40:44.850670 [DEBUG] fingerprint.Analyze len(rx)=100 lastPrompt="rommon 1 >"
+2025/10/01 13:40:44.850693 [DEBUG] Analyze stage=bootloader candidates=2
+2025/10/01 13:40:44.850698 [INFO] Finalize result vendor=Bootloader os=ROMMON model= confidence=0.95
+2025/10/01 13:40:44.850883 [DEBUG] fingerprint.Analyze len(rx)=21 lastPrompt=""
+2025/10/01 13:40:44.850900 [DEBUG] Analyze stage=bootloader candidates=1
+2025/10/01 13:40:44.850905 [INFO] Finalize result vendor=Bootloader os=GRUB model= confidence=0.60
+2025/10/01 13:40:44.850981 [DEBUG] fingerprint.Analyze len(rx)=30 lastPrompt="login:"
+2025/10/01 13:40:44.850999 [DEBUG] Analyze stage=login candidates=0
+2025/10/01 13:40:44.851002 [WARN] Finalize: no candidates for provided input
+2025/10/01 13:40:44.851187 [DEBUG] fingerprint.Analyze len(rx)=38 lastPrompt="user@host:~$"
+2025/10/01 13:40:44.851205 [DEBUG] Analyze stage=prompt candidates=2
+2025/10/01 13:40:44.851220 [INFO] Finalize result vendor=Linux/BusyBox os=Linux model= confidence=0.40

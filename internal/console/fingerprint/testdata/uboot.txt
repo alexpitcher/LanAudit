@@ -1,0 +1,5 @@
+--- banner ---
+U-Boot 2023.01 (Jan 01 2023)
+--- prompt ---
+=>
+--- probe ---

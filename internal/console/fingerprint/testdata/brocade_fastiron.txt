@@ -1,0 +1,7 @@
+--- banner ---
+FastIron ICX7250-48P Switch
+--- prompt ---
+ICX7250-48P#
+--- probe ---
+System Model: ICX7250-48P
+SW Version 08.0.30

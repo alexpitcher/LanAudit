@@ -1,0 +1,6 @@
+--- banner ---
+Welcome to unknown system
+--- prompt ---
+user@host:~$
+--- probe ---
+

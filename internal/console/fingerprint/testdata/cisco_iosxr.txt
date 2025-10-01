@@ -1,0 +1,7 @@
+--- banner ---
+Cisco IOS XR Software, Version 7.3.1
+--- prompt ---
+RP/0/RSP0/CPU0:router#
+--- probe ---
+cisco IOS XR Software, Version 7.3.1
+cisco R-IOSXRV9000 (Virtual) processor

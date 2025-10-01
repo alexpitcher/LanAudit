@@ -1,0 +1,7 @@
+--- banner ---
+Cisco Adaptive Security Appliance Software Version 9.8(4)
+--- prompt ---
+ciscoasa#
+--- probe ---
+Cisco Adaptive Security Appliance Software Version 9.8(4)
+Hardware        : ASA5515, 8192 MB RAM, CPU Atom C2000

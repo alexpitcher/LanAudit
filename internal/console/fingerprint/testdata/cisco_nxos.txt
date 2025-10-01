@@ -1,0 +1,8 @@
+--- banner ---
+Cisco Nexus Operating System (NX-OS) Software
+--- prompt ---
+switch#
+--- probe ---
+Hardware
+  cisco Nexus 93180YC-FX Chassis
+NXOS: version 9.3(7)

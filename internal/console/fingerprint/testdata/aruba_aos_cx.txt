@@ -1,0 +1,7 @@
+--- banner ---
+ArubaOS-CX 10.07
+--- prompt ---
+CXSwitch#
+--- probe ---
+ArubaOS-CX 10.07.0010
+Platform : Aruba 8320 Switch Series

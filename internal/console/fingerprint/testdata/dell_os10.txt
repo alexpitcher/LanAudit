@@ -1,0 +1,7 @@
+--- banner ---
+Dell EMC Networking OS10 Enterprise
+--- prompt ---
+OS10Switch#
+--- probe ---
+Product: Dell S5248F-ON
+OS Version: 10.5.2.1

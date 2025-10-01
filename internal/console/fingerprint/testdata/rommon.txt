@@ -1,0 +1,6 @@
+--- banner ---
+System Bootstrap, Version 15.4(3r)S, RELEASE SOFTWARE
+Use BREAK or ESC to interrupt boot.
+--- prompt ---
+rommon 1 >
+--- probe ---

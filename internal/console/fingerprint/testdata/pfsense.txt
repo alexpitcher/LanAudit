@@ -1,0 +1,6 @@
+--- banner ---
+pfSense 2.7.0
+--- prompt ---
+root@pfSense:~ #
+--- probe ---
+FreeBSD pfSense 14.0-STABLE

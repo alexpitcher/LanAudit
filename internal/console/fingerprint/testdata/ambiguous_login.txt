@@ -1,0 +1,6 @@
+--- banner ---
+Some Device v1.0
+login:
+--- prompt ---
+login:
+--- probe ---

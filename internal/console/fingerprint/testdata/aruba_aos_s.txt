@@ -1,0 +1,7 @@
+--- banner ---
+Aruba 2930F Switch
+--- prompt ---
+Aruba2930F#
+--- probe ---
+Image stamp: Aruba 2930F 16.10
+ROM Version : KA.16.10.0011

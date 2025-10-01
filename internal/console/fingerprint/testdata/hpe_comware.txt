@@ -1,0 +1,7 @@
+--- banner ---
+HP Comware Platform Software
+--- prompt ---
+<HP>
+--- probe ---
+HP Comware Platform Software, Version 7.1.059
+System Name: HPE 5130-24G-PoE+-4SFP+ EI

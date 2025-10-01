@@ -1,0 +1,8 @@
+--- banner ---
+MikroTik RouterOS 7.7 (c) 1999-2023
+--- prompt ---
+[admin@MikroTik] >
+--- probe ---
+              uptime: 1w2d3h
+             version: 7.7
+          board-name: CRS328-24P-4S+

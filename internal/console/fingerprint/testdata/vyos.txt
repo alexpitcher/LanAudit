@@ -1,0 +1,7 @@
+--- banner ---
+vyos login:
+--- prompt ---
+vyos@vyos:~$
+--- probe ---
+Version: 1.4-rolling-20240220
+Built by: maintainers@vyos.net

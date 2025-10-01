@@ -1,0 +1,7 @@
+--- banner ---
+HUAWEI Versatile Routing Platform Software
+--- prompt ---
+<HUAWEI>
+--- probe ---
+Huawei Versatile Routing Platform Software (VRP) Software Version 8.180
+Product Version: S5720-28X-SI-AC

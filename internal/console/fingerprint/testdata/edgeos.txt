@@ -1,0 +1,6 @@
+--- banner ---
+Welcome to EdgeOS
+--- prompt ---
+ubnt@EdgeRouter:~$
+--- probe ---
+Linux EdgeRouter 4.19.0-UBNT #1 SMP

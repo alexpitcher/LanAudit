@@ -1,0 +1,7 @@
+--- banner ---
+FortiGate-60E login:
+--- prompt ---
+FGT60E #
+--- probe ---
+Version: FortiGate-60E v6.4.9,build2044
+Serial-Number: FG60ETK123456789
