@@ -14,7 +14,7 @@
 *.out
 coverage.txt
 coverage.html
-
+log.txt
 # Dependency directories
 vendor/
 

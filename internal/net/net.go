@@ -38,6 +38,7 @@ type InterfaceDetails struct {
 	PacketsRx      uint64
 	PacketsTx      uint64
 	Speed          string
+	Type           string
 }
 
 // ListInterfaces returns all network interfaces
@@ -127,12 +128,12 @@ func isConfusingInterface(name string) bool {
 // getInterfaceDescription returns a human-friendly description
 func getInterfaceDescription(name string) string {
 	descriptions := map[string]string{
-		"en0": "Wi-Fi/Built-in Ethernet",
-		"en1": "Thunderbolt Ethernet",
-		"en2": "Thunderbolt Bridge",
-		"en3": "USB Ethernet",
-		"eth0": "Primary Ethernet",
-		"eth1": "Secondary Ethernet",
+		"en0":   "Wi-Fi/Built-in Ethernet",
+		"en1":   "Thunderbolt Ethernet",
+		"en2":   "Thunderbolt Bridge",
+		"en3":   "USB Ethernet",
+		"eth0":  "Primary Ethernet",
+		"eth1":  "Secondary Ethernet",
 		"wlan0": "Wireless",
 	}
 
@@ -204,8 +205,14 @@ func GetInterfaceDetails(name string) (*InterfaceDetails, error) {
 		BytesTx:        stats.BytesTx,
 		PacketsRx:      stats.PacketsRx,
 		PacketsTx:      stats.PacketsTx,
-		Speed:          "Unknown",
+		Speed:          "", // Loaded asynchronously
+		Type:           "", // Loaded asynchronously
 	}, nil
+}
+
+// GetExtendedInterfaceDetails retrieves slow-to-load information (Speed, Type)
+func GetExtendedInterfaceDetails(name string) (speed string, ifaceType string, err error) {
+	return getExtendedInterfaceInfo(name)
 }
 
 // IsRoot checks if running with root/sudo privileges

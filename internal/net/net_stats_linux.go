@@ -3,12 +3,31 @@
 package net
 
 import (
-	"bufio"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 )
+
+// getExtendedInterfaceInfo returns speed and type
+func getExtendedInterfaceInfo(name string) (speed string, ifaceType string, err error) {
+	speed = "Unknown"
+	ifaceType = "Unknown"
+
+	// Check /sys/class/net/<name>/type (1=ethernet, etc)
+	// For now just check speed
+	data, err := os.ReadFile(filepath.Join("/sys/class/net", name, "speed"))
+	if err == nil {
+		s := strings.TrimSpace(string(data))
+		if _, err := strconv.Atoi(s); err == nil {
+			speed = s + " Mbps"
+		}
+	}
+	// TODO: better type detection
+	ifaceType = "Ethernet"
+
+	return speed, ifaceType, nil
+}
 
 // InterfaceStats holds interface statistics
 type InterfaceStats struct {

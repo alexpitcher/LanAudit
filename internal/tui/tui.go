@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
 
@@ -180,6 +179,12 @@ type vlanResultMsg struct {
 	err     error
 }
 
+type extendedDetailsMsg struct {
+	speed     string
+	ifaceType string
+	err       error
+}
+
 type auditResultMsg struct {
 	result *scan.ScanResult
 	err    error
@@ -244,6 +249,20 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.statusMsg = m.diagnoseView.statusMessage
 		return m, nil
 
+	case extendedDetailsMsg:
+		if m.detailsView != nil {
+			if msg.err != nil {
+				logging.Warnf("failed to load extended details: %v", msg.err)
+				m.details.Speed = "Error"
+				m.details.Type = "Error"
+			} else {
+				m.details.Speed = msg.speed
+				m.details.Type = msg.ifaceType
+			}
+			m.detailsView.lastUpdate = time.Now()
+		}
+		return m, nil
+
 	case speedtestResultMsg:
 		if m.speedtestView == nil {
 			m.speedtestView = &SpeedtestView{}
@@ -274,6 +293,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.mode == ViewDetails && m.selectedIface != "" {
 			details, err := netpkg.GetInterfaceDetails(m.selectedIface)
 			if err == nil {
+				// Preserve slow-loading fields from existing details
+				if m.details != nil && m.details.Name == details.Name {
+					details.Speed = m.details.Speed
+					details.Type = m.details.Type
+				}
+
 				m.details = details
 				if m.detailsView != nil {
 					m.detailsView.details = details
@@ -638,7 +663,18 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m = m.activateMode(sel.mode)
 			m.layer = LayerView
 			logging.Infof("enter -> activate mode %v", sel.mode)
+
+			// Trigger extended details if entering Details view
+			if sel.mode == ViewDetails && m.selectedIface != "" {
+				return m, getExtendedDetailsCmd(m.selectedIface)
+			}
 		}
+	}
+
+	// Also check for mode switches from other keys
+	if m.mode == ViewDetails && m.layer == LayerView && m.detailsView != nil && m.detailsView.details.Speed == "" {
+		// This handles the 'd' key shortcut case
+		return m, getExtendedDetailsCmd(m.selectedIface)
 	}
 
 	return m, nil
@@ -712,8 +748,8 @@ func (m Model) renderPicker() string {
 	}
 
 	s += "╠══════════════════════════════════════════════════════════════════╣\n"
-	s += "║ Arrow keys: Navigate  |  1-9: Quick select  |  ENTER: Select   ║\n"
-	s += "║ q/esc: Back/quit                                              ║\n"
+	s += "║ Arrow keys: Navigate  |  1-9: Quick select  |  ENTER: Select     ║\n"
+	s += "║ q/esc: Back/quit                                                 ║\n"
 	s += "╚══════════════════════════════════════════════════════════════════╝\n"
 
 	return s
@@ -886,7 +922,15 @@ func (m Model) renderDetailsView() string {
 	s += fmt.Sprintf("MAC:        %s\n", m.details.MAC)
 	s += fmt.Sprintf("MTU:        %d bytes\n", m.details.MTU)
 	s += fmt.Sprintf("Link:       %s\n", linkStatus)
-	s += fmt.Sprintf("Speed:      %s\n\n", m.details.Speed)
+	speed := m.details.Speed
+	if speed == "" {
+		speed = "Loading..."
+	}
+	s += fmt.Sprintf("Speed:      %s\n", speed)
+	if m.details.Type != "" {
+		s += fmt.Sprintf("Type:       %s\n", m.details.Type)
+	}
+	s += "\n"
 
 	s += "═══ IP Addresses ═══\n"
 	if len(m.details.IPs) > 0 {
@@ -1020,6 +1064,8 @@ func (m Model) renderDiagnoseView() string {
 		s.WriteString(fmt.Sprintf("\nLast run: %s\n", dv.lastRun.Format("15:04:05")))
 	}
 
+	s.WriteString("\nPress 'r' to re-run diagnostics.\n")
+
 	return s.String()
 }
 
@@ -1054,7 +1100,11 @@ func (m Model) renderCaptureView() string {
 	s += fmt.Sprintf("Status: %s\n\n", m.captureView.statusMessage)
 
 	if m.captureView.running {
-		s += fmt.Sprintf("Packets captured: %d\n\n", m.captureView.packetCount)
+		count := 0
+		if m.captureSession != nil {
+			count = m.captureSession.GetPacketCount()
+		}
+		s += fmt.Sprintf("Packets captured: %d\n\n", count)
 		s += "Press 'x' to stop capture\n"
 	} else {
 		s += "Commands:\n"
@@ -1393,4 +1443,11 @@ func RunHeadless(ctx context.Context, ifaceName string) error {
 	fmt.Printf("Gateway: %s\n", details.DefaultGateway)
 
 	return nil
+}
+
+func getExtendedDetailsCmd(iface string) tea.Cmd {
+	return func() tea.Msg {
+		speed, ifaceType, err := netpkg.GetExtendedInterfaceDetails(iface)
+		return extendedDetailsMsg{speed: speed, ifaceType: ifaceType, err: err}
+	}
 }
