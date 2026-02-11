@@ -13,12 +13,12 @@ import (
 
 // ServiceInfo represents a discovered service on a host
 type ServiceInfo struct {
-	Port      int
-	Protocol  string
-	State     string
-	Service   string
-	TLSInfo   string
-	Banner    string
+	Port     int
+	Protocol string
+	State    string
+	Service  string
+	TLSInfo  string
+	Banner   string
 }
 
 // HostResult represents scan results for a single host
@@ -62,7 +62,7 @@ func AuditGateway(gateway string, ports []int, timeout time.Duration) (*ScanResu
 	}
 
 	if timeout == 0 {
-		timeout = 2 * time.Second
+		timeout = 500 * time.Millisecond
 	}
 
 	result := &ScanResult{
@@ -85,7 +85,7 @@ func AuditGateway(gateway string, ports []int, timeout time.Duration) (*ScanResu
 	resultChan := make(chan HostResult, len(hosts))
 
 	// Start workers
-	numWorkers := 10
+	numWorkers := 50
 	for i := 0; i < numWorkers; i++ {
 		wg.Add(1)
 		go func() {
@@ -201,7 +201,7 @@ func scanPort(host string, port int, timeout time.Duration) ServiceInfo {
 		State:    "closed",
 	}
 
-	address := fmt.Sprintf("%s:%d", host, port)
+	address := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 	conn, err := net.DialTimeout("tcp", address, timeout)
 	if err != nil {
 		return service

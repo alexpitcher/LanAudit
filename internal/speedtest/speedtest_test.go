@@ -3,6 +3,8 @@ package speedtest
 import (
 	"testing"
 	"time"
+
+	"github.com/showwin/speedtest-go/speedtest"
 )
 
 func TestResult(t *testing.T) {
@@ -81,13 +83,15 @@ func TestFormatResult(t *testing.T) {
 }
 
 func TestCalculateJitter(t *testing.T) {
-	// calculateJitter is not exported, so we test it indirectly
-	// Just verify the function exists and doesn't panic
-	result := Result{
-		Latency: 20 * time.Millisecond,
+	// calculateJitter is unexported but accessible since we are in package speedtest
+	server := &speedtest.Server{
+		Latency: 100 * time.Millisecond,
 	}
 
-	if result.Latency == 0 {
-		t.Error("Latency should not be zero")
+	got := calculateJitter(server)
+	want := 10 * time.Millisecond
+
+	if got != want {
+		t.Errorf("calculateJitter() = %v, want %v", got, want)
 	}
 }

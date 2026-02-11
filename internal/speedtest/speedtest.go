@@ -71,8 +71,9 @@ func RunWithTimeout(timeout time.Duration) (*Result, error) {
 
 	// Build result
 	result := &Result{
-		DownloadMbps: float64(server.DLSpeed),
-		UploadMbps:   float64(server.ULSpeed),
+		// Library returns raw bits per second, convert to Mbps
+		DownloadMbps: float64(server.DLSpeed) / 1000000.0,
+		UploadMbps:   float64(server.ULSpeed) / 1000000.0,
 		Latency:      server.Latency,
 		ServerName:   server.Name,
 		ServerCity:   server.Sponsor,

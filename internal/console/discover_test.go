@@ -38,7 +38,7 @@ func TestGenerateFriendlyName(t *testing.T) {
 		path string
 		want string
 	}{
-		{"/dev/ttyUSB0", "ttyUSB0"},  // Returns basename on macOS
+		{"/dev/ttyUSB0", "ttyUSB0"}, // Returns basename on macOS
 		{"/dev/ttyACM1", "ttyACM1"},
 		{"/dev/ttyS0", "ttyS0"},
 		{"/dev/cu.usbserial-FT123456", "usbserial-FT123456"},
@@ -60,17 +60,18 @@ func TestDetectHints(t *testing.T) {
 		path      string
 		wantHints string
 	}{
-		{"/dev/ttyUSB-ftdi", "FTDI, USB-Serial"},
-		{"/dev/cu.usbserial-cp2102", "USB-Serial"},
-		{"/dev/tty.usbmodem-ch340", "USB-Modem"},
+		{"/dev/ttyUSB-ftdi", "FTDI"},
+		{"/dev/cu.usbserial-cp2102", "CP210x, USB-Serial"},
+		{"/dev/tty.usbmodem-ch340", "CH34x, USB-Modem"},
 		{"/dev/ttyACM0", ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
 			got := detectHints(tt.path)
-			// Just check it doesn't panic and returns a string
-			_ = got
+			if got != tt.wantHints {
+				t.Errorf("detectHints(%q) = %q, want %q", tt.path, got, tt.wantHints)
+			}
 		})
 	}
 }

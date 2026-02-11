@@ -2,34 +2,38 @@ package capture
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
+	"github.com/google/gopacket/pcapgo"
 )
 
 // PacketSummary represents a captured packet
 type PacketSummary struct {
-	Timestamp    time.Time
-	SourceIP     string
-	DestIP       string
-	SourcePort   string
-	DestPort     string
-	Protocol     string
-	Length       int
-	Info         string
+	Timestamp  time.Time
+	SourceIP   string
+	DestIP     string
+	SourcePort string
+	DestPort   string
+	Protocol   string
+	Length     int
+	Info       string
 }
 
 // Session represents an active capture session
 type Session struct {
-	Interface   string
-	Handle      *pcap.Handle
-	Packets     []PacketSummary
-	mu          sync.RWMutex
-	stopChan    chan struct{}
-	running     bool
+	Interface  string
+	Handle     *pcap.Handle
+	LinkType   layers.LinkType
+	Packets    []PacketSummary
+	RawPackets []gopacket.Packet
+	mu         sync.RWMutex
+	stopChan   chan struct{}
+	running    bool
 }
 
 var (
@@ -62,11 +66,13 @@ func Start(iface string, filter string, maxPackets int) (*Session, error) {
 	}
 
 	session := &Session{
-		Interface: iface,
-		Handle:    handle,
-		Packets:   make([]PacketSummary, 0, maxPackets),
-		stopChan:  make(chan struct{}),
-		running:   true,
+		Interface:  iface,
+		Handle:     handle,
+		LinkType:   handle.LinkType(),
+		Packets:    make([]PacketSummary, 0, maxPackets),
+		RawPackets: make([]gopacket.Packet, 0, maxPackets),
+		stopChan:   make(chan struct{}),
+		running:    true,
 	}
 
 	currentSession = session
@@ -99,6 +105,7 @@ func (s *Session) captureLoop(maxPackets int) {
 				return
 			}
 			s.Packets = append(s.Packets, summary)
+			s.RawPackets = append(s.RawPackets, packet)
 			s.mu.Unlock()
 		}
 	}
@@ -226,7 +233,7 @@ func StopCurrentSession() error {
 	}
 
 	currentSession.Stop()
-	currentSession = nil
+	// currentSession = nil // Keep session available for saving/inspection
 	return nil
 }
 
@@ -242,4 +249,33 @@ func Status() string {
 	return fmt.Sprintf("Capturing on %s: %d packets",
 		currentSession.Interface,
 		currentSession.GetPacketCount())
+}
+
+// SaveToPCAP saves the captured packets to a PCAP file
+func (s *Session) SaveToPCAP(filename string) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if len(s.RawPackets) == 0 {
+		return fmt.Errorf("no packets to save")
+	}
+
+	f, err := os.Create(filename)
+	if err != nil {
+		return fmt.Errorf("failed to create file: %w", err)
+	}
+	defer f.Close()
+
+	w := pcapgo.NewWriter(f)
+	if err := w.WriteFileHeader(65536, s.LinkType); err != nil {
+		return fmt.Errorf("failed to write header: %w", err)
+	}
+
+	for _, p := range s.RawPackets {
+		if err := w.WritePacket(p.Metadata().CaptureInfo, p.Data()); err != nil {
+			return fmt.Errorf("failed to write packet: %w", err)
+		}
+	}
+
+	return nil
 }

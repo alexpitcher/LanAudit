@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/alexpitcher/LanAudit/internal/capture"
+	"github.com/alexpitcher/LanAudit/internal/console"
 	fingerprint "github.com/alexpitcher/LanAudit/internal/console/fingerprint"
 	"github.com/alexpitcher/LanAudit/internal/diagnostics"
 	"github.com/alexpitcher/LanAudit/internal/logging"
@@ -32,6 +34,7 @@ const (
 	ViewSettings
 	ViewCapture
 	ViewAudit
+	ViewLLDP
 	ViewSpeedtest
 	ViewConsole
 )
@@ -59,6 +62,9 @@ type Model struct {
 	inputPrompt    string
 	inputValue     string
 	inputSubmit    func(*Model, string) tea.Cmd
+
+	// Help overlay
+	helpActive bool
 
 	// Sub-models for each view
 	detailsView   *DetailsView
@@ -190,6 +196,19 @@ type auditResultMsg struct {
 	err    error
 }
 
+type startCaptureMsg struct {
+	err error
+}
+
+type stopCaptureMsg struct {
+	err error
+}
+
+type saveCaptureMsg struct {
+	filename string
+	err      error
+}
+
 type lldpResultMsg struct {
 	neighbors []netpkg.LLDPNeighbor
 	err       error
@@ -198,6 +217,24 @@ type lldpResultMsg struct {
 type snapshotResultMsg struct {
 	path string
 	err  error
+}
+
+type consolePortsMsg struct {
+	ports []console.SerialPort
+	err   error
+}
+
+type consoleSessionMsg struct {
+	session *console.Session
+	err     error
+}
+
+type consoleProbeMsg struct {
+	result console.ProbeResult
+}
+
+type consoleDataMsg struct {
+	data []byte
 }
 
 // MenuLayer represents which layer of the UI is active
@@ -231,6 +268,19 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		logging.Infof("key pressed: %q (layer=%d mode=%d)", msg.String(), m.layer, m.mode)
 		return m.handleKeys(msg)
 
+	case auditResultMsg:
+		if m.auditView != nil {
+			m.auditView.running = false
+			m.auditView.result = msg.result
+			m.auditView.err = msg.err
+			if msg.err != nil {
+				m.auditView.statusMessage = fmt.Sprintf("Audit failed: %v", msg.err)
+			} else {
+				m.auditView.statusMessage = fmt.Sprintf("Audit complete. Found %d active hosts.", msg.result.ActiveHosts)
+			}
+		}
+		return m, nil
+
 	case diagnoseResultMsg:
 		if m.diagnoseView == nil {
 			m.diagnoseView = &DiagnoseView{}
@@ -263,10 +313,58 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case startCaptureMsg:
+		if m.captureView != nil {
+			if msg.err != nil {
+				m.captureView.running = false
+				m.captureView.statusMessage = fmt.Sprintf("Capture failed: %v", msg.err)
+				// Also set global error and status message
+				m.err = msg.err
+				m.statusMsg = m.captureView.statusMessage
+				logging.Warnf("capture failed to start: %v", msg.err)
+			} else {
+				m.captureView.running = true
+				m.captureView.statusMessage = "Capturing packets..."
+				m.captureSession = capture.GetCurrentSession()
+				logging.Infof("capture started successfully")
+			}
+		}
+		return m, nil
+
+	case stopCaptureMsg:
+		if m.captureView != nil {
+			m.captureView.running = false
+			if msg.err != nil {
+				m.captureView.statusMessage = fmt.Sprintf("Stop failed: %v", msg.err)
+				logging.Warnf("capture failed to stop: %v", msg.err)
+			} else {
+				m.captureView.statusMessage = "Capture stopped"
+				logging.Infof("capture stopped successfully")
+			}
+		}
+		return m, nil
+
+	case saveCaptureMsg:
+		if m.captureView != nil {
+			if msg.err != nil {
+				m.captureView.statusMessage = fmt.Sprintf("Save failed: %v", msg.err)
+				logging.Warnf("failed to save capture: %v", msg.err)
+			} else {
+				m.captureView.statusMessage = fmt.Sprintf("Saved to %s", msg.filename)
+				logging.Infof("capture saved to %s", msg.filename)
+			}
+		}
+		return m, nil
+
 	case speedtestResultMsg:
 		if m.speedtestView == nil {
 			m.speedtestView = &SpeedtestView{}
 		}
+		// If user cancelled, ignore result
+		if !m.speedtestView.running && m.speedtestView.statusMessage == "Speedtest cancelled" {
+			return m, nil
+		}
+
 		m.speedtestView.running = false
 		m.speedtestView.lastRun = time.Now()
 		m.speedtestView.result = msg.res
@@ -309,7 +407,96 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				logging.Warnf("failed to refresh interface details: %v", err)
 			}
 		}
+		// Sync capture state
+		if m.captureView != nil && m.captureView.running {
+			sess := capture.GetCurrentSession()
+			if sess == nil || !sess.IsRunning() {
+				m.captureView.running = false
+				m.captureView.statusMessage = "Capture stopped (limit reached or external stop)"
+				logging.Infof("capture state synced: stopped")
+			}
+		}
 		return m, tick()
+
+	case consolePortsMsg:
+		if m.consoleView != nil {
+			if msg.err != nil {
+				m.consoleView.statusMessage = fmt.Sprintf("Error finding ports: %v", msg.err)
+			} else {
+				m.consoleView.ports = make([]interface{}, len(msg.ports))
+				for i, p := range msg.ports {
+					m.consoleView.ports[i] = p
+				}
+				if len(m.consoleView.ports) > 0 {
+					m.consoleView.selectedPort = 0
+					m.consoleView.statusMessage = fmt.Sprintf("Found %d ports. Select and press Enter.", len(m.consoleView.ports))
+				} else {
+					m.consoleView.statusMessage = "No serial ports found."
+				}
+			}
+		}
+		return m, nil
+
+	case consoleSessionMsg:
+		if m.consoleView != nil {
+			if msg.err != nil {
+				m.consoleView.statusMessage = fmt.Sprintf("Connection failed: %v", msg.err)
+			} else {
+				m.consoleView.session = msg.session
+				m.consoleView.statusMessage = fmt.Sprintf("Connected to %s", msg.session.ID())
+				// Start reading data
+				return m, readConsoleDataCmd(msg.session)
+			}
+		}
+		return m, nil
+
+	case consoleDataMsg:
+		if m.consoleView != nil && m.consoleView.session != nil {
+			// Append valid UTF-8 string to buffer
+			text := string(msg.data) // Simplified; real impl should sanitise
+			lines := strings.Split(text, "\n")
+			for _, line := range lines {
+				if line != "" {
+					m.consoleView.buffer = append(m.consoleView.buffer, line)
+				}
+			}
+			// Keep buffer size reasonable
+			if len(m.consoleView.buffer) > 1000 {
+				m.consoleView.buffer = m.consoleView.buffer[len(m.consoleView.buffer)-1000:]
+			}
+			// Continue reading
+			return m, readConsoleDataCmd(m.consoleView.session.(*console.Session))
+		}
+		return m, nil
+
+	case consoleProbeMsg:
+		if m.consoleView != nil {
+			m.consoleView.probeStatus = "Done"
+			if msg.result.Success {
+				fp := msg.result.Fingerprint
+				m.consoleView.fingerprint = &fp
+				m.consoleView.statusMessage = fmt.Sprintf("Probe success: %s", fp.Vendor)
+			} else {
+				m.consoleView.statusMessage = fmt.Sprintf("Probe failed: %v", msg.result.Error)
+			}
+		}
+		return m, nil
+
+	case lldpResultMsg:
+		if m.lldpView == nil {
+			m.lldpView = &LLDPView{}
+		}
+		m.lldpView.running = false
+		m.lldpView.err = msg.err
+		if msg.err != nil {
+			m.lldpView.statusMessage = fmt.Sprintf("LLDP discovery failed: %v", msg.err)
+			logging.Warnf(m.lldpView.statusMessage)
+		} else {
+			m.lldpView.neighbors = msg.neighbors
+			m.lldpView.statusMessage = fmt.Sprintf("Discovery complete. Found %d neighbors.", len(msg.neighbors))
+			logging.Infof("LLDP discovery complete, found %d neighbors", len(msg.neighbors))
+		}
+		return m, nil
 
 	case error:
 		logging.Errorf("tui received error: %v", msg)
@@ -322,6 +509,33 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // handleKeys processes keyboard input
 func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Global input handling
+	if m.inputActive {
+		switch msg.Type {
+		case tea.KeyEnter:
+			m.inputActive = false
+			if m.inputSubmit != nil {
+				return m, m.inputSubmit(&m, m.inputValue)
+			}
+			return m, nil
+		case tea.KeyEsc:
+			m.inputActive = false
+			m.inputValue = ""
+			m.inputPrompt = ""
+			m.statusMsg = "Input cancelled"
+			return m, nil
+		case tea.KeyBackspace, tea.KeyDelete:
+			if len(m.inputValue) > 0 {
+				m.inputValue = m.inputValue[:len(m.inputValue)-1]
+			}
+		case tea.KeyRunes:
+			m.inputValue += msg.String()
+		case tea.KeySpace:
+			m.inputValue += " "
+		}
+		return m, nil
+	}
+
 	switch msg.String() {
 	case "ctrl+c":
 		logging.Infof("key ctrl+c -> quit")
@@ -391,6 +605,15 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "r":
+		if m.mode == ViewSettings && m.layer == LayerView && m.config != nil {
+			m.config.Redact = !m.config.Redact
+			m.statusMsg = fmt.Sprintf("Redact mode: %v", m.config.Redact)
+			if err := store.SaveConfig(m.config); err != nil {
+				logging.Errorf("failed to save config: %v", err)
+			}
+			return m, nil
+		}
+
 		if m.mode == ViewDiagnose && m.layer == LayerView {
 			if m.selectedIface == "" {
 				m.statusMsg = "Select an interface before running diagnostics"
@@ -417,7 +640,52 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, runDiagnosticsCmd(m.selectedIface, timeout, m.config)
 		}
 
+	case "t":
+		if m.mode == ViewSettings && m.layer == LayerView && m.config != nil {
+			timeouts := []int{1000, 2000, 5000, 10000}
+			current := m.config.DiagnosticsTimeout
+			next := timeouts[0]
+			for i, t := range timeouts {
+				if current == t && i < len(timeouts)-1 {
+					next = timeouts[i+1]
+					break
+				}
+			}
+			m.config.DiagnosticsTimeout = next
+			m.statusMsg = fmt.Sprintf("Diagnostics timeout set to %dms", next)
+			if err := store.SaveConfig(m.config); err != nil {
+				logging.Errorf("failed to save config: %v", err)
+			}
+			return m, nil
+		}
+
 	case "s":
+		if m.mode == ViewCapture && m.layer == LayerView {
+			if m.captureView == nil {
+				m.captureView = &CaptureView{}
+			}
+			// Check if backend is actually running, not just UI state
+			isRunning := false
+			if m.captureView.running {
+				if sess := capture.GetCurrentSession(); sess != nil && sess.IsRunning() {
+					isRunning = true
+				} else {
+					// UI thinks running but backend dead -> reset
+					m.captureView.running = false
+					logging.Warnf("capture UI state desync detected, resetting to stopped")
+				}
+			}
+
+			if isRunning {
+				logging.Debugf("capture already running")
+				break
+			}
+			m.captureView.running = true
+			m.captureView.statusMessage = "Starting capture..."
+			m.statusMsg = m.captureView.statusMessage
+			logging.Infof("starting capture on %s", m.selectedIface)
+			return m, startCaptureCmd(m.selectedIface, m.captureView.filter)
+		}
 		if m.mode == ViewSpeedtest && m.layer == LayerView {
 			if m.speedtestView == nil {
 				m.speedtestView = &SpeedtestView{}
@@ -434,6 +702,34 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			logging.Infof("starting speedtest")
 			return m, runSpeedtestCmd()
 		}
+		if m.mode == ViewAudit && m.layer == LayerView {
+			if m.auditView == nil {
+				m.auditView = &AuditView{}
+			}
+			if m.auditView.running {
+				break
+			}
+			m.auditView.running = true
+			m.auditView.statusMessage = "Scanning network..."
+			m.statusMsg = "Running Audit..."
+			gateway := ""
+			if m.details != nil {
+				gateway = m.details.DefaultGateway
+			}
+			return m, runAuditCmd(gateway)
+		}
+		if m.mode == ViewLLDP && m.layer == LayerView {
+			if m.lldpView == nil {
+				m.lldpView = &LLDPView{}
+			}
+			if m.lldpView.running {
+				break
+			}
+			m.lldpView.running = true
+			m.lldpView.statusMessage = "Listening for LLDP packets..."
+			m.statusMsg = "Running LLDP Discovery..."
+			return m, runLLDPCmd(m.selectedIface, 30*time.Second)
+		}
 		if m.layer == LayerView {
 			break
 		}
@@ -441,6 +737,26 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.layer = LayerView
 		m.statusMsg = "Settings"
 		logging.Infof("key 's' -> ViewSettings")
+
+	case "f":
+		if m.mode == ViewCapture && m.layer == LayerView {
+			m.inputActive = true
+			m.inputPrompt = "BPF Filter (e.g. 'tcp port 80'): "
+			m.inputValue = m.captureView.filter
+			m.inputSubmit = func(m *Model, val string) tea.Cmd {
+				m.captureView.filter = val
+				m.statusMsg = fmt.Sprintf("Filter set to: %s", val)
+				return nil
+			}
+			m.statusMsg = "Enter BPF filter..."
+			return m, nil
+		}
+		if m.mode == ViewConsole && m.layer == LayerView {
+			if m.consoleView != nil {
+				m.consoleView.statusMessage = "Refreshing ports..."
+				return m, discoverPortsCmd()
+			}
+		}
 
 	case "c":
 		if m.layer == LayerView {
@@ -457,6 +773,46 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			m.statusMsg = "Packet Capture"
 			logging.Infof("key 'c' -> ViewCapture (%s)", m.selectedIface)
+		}
+
+	case "x":
+		if m.mode == ViewCapture && m.layer == LayerView {
+			// Stop capture
+			if m.captureView != nil && m.captureView.running {
+				m.captureView.statusMessage = "Stopping capture..."
+				m.statusMsg = "Stopping..."
+				logging.Infof("stopping capture")
+				return m, stopCaptureCmd()
+			}
+		}
+		if m.mode == ViewSpeedtest && m.layer == LayerView {
+			// Cancel speedtest
+			if m.speedtestView != nil && m.speedtestView.running {
+				m.speedtestView.running = false
+				m.speedtestView.statusMessage = "Speedtest cancelled"
+				m.statusMsg = "Speedtest cancelled"
+				logging.Infof("speedtest cancelled by user")
+			}
+		}
+		if m.mode == ViewConsole && m.layer == LayerView && m.consoleView != nil && m.consoleView.session != nil {
+			// Close console session
+			sess := m.consoleView.session.(*console.Session)
+			m.consoleView.session = nil
+			m.consoleView.statusMessage = "Session closed"
+			return m, closeConsoleSessionCmd(sess)
+		}
+
+	case "w":
+		if m.mode == ViewCapture && m.layer == LayerView {
+			if m.captureView != nil {
+				if m.captureSession == nil || m.captureSession.GetPacketCount() == 0 {
+					m.captureView.statusMessage = "No packets to save"
+					break
+				}
+				filename := fmt.Sprintf("capture_%s.pcap", time.Now().Format("20060102_150405"))
+				m.captureView.statusMessage = fmt.Sprintf("Saving to %s...", filename)
+				return m, saveCaptureCmd(filename)
+			}
 		}
 
 	case "a":
@@ -477,6 +833,16 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "p":
+		if m.mode == ViewConsole && m.layer == LayerView {
+			if m.consoleView != nil && len(m.consoleView.ports) > 0 {
+				port := m.consoleView.ports[m.consoleView.selectedPort].(console.SerialPort).Path
+				m.consoleView.statusMessage = fmt.Sprintf("Probing %s...", port)
+				m.consoleView.probeStatus = "Running..."
+				return m, probePortCmd(context.Background(), port)
+			}
+			break
+		}
+
 		if m.layer == LayerView {
 			break
 		}
@@ -498,7 +864,7 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			break
 		}
 		if m.selectedIface != "" {
-			m = m.activateMode(ViewCapture) // Reuse capture mode for LLDP
+			m = m.activateMode(ViewLLDP)
 			m.layer = LayerView
 			if m.lldpView == nil {
 				m.lldpView = &LLDPView{
@@ -520,14 +886,15 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if m.consoleView == nil {
 			m.consoleView = &ConsoleView{
 				ports:                  make([]interface{}, 0),
-				selectedPort:           -1,
+				selectedPort:           0,
 				buffer:                 make([]string, 0),
-				statusMessage:          "Discovering serial ports...",
+				statusMessage:          "Press 'f' to discover ports",
 				dtrState:               true,
 				rtsState:               true,
 				logging:                false,
 				allowProbeInConfigMode: m.config != nil && m.config.Console.AllowProbeInConfigMode,
 			}
+			return m, discoverPortsCmd()
 		}
 		m.statusMsg = "Serial Console"
 		logging.Infof("key 'o' -> ViewConsole")
@@ -544,6 +911,9 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.consoleView.allowProbeInConfigMode = !m.consoleView.allowProbeInConfigMode
 			if m.config != nil {
 				m.config.Console.AllowProbeInConfigMode = m.consoleView.allowProbeInConfigMode
+				if err := store.SaveConfig(m.config); err != nil {
+					logging.Errorf("failed to save config: %v", err)
+				}
 			}
 			if m.consoleView.allowProbeInConfigMode {
 				m.statusMsg = "Config-mode probes enabled"
@@ -554,7 +924,32 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
+	default:
+		// Forward typing to console session if active
+		if m.mode == ViewConsole && m.consoleView != nil && m.consoleView.session != nil {
+			// Filter out navigation keys that shouldn't be forwarded if handled above
+			// But since we are directly in case default, these are keys NOT handled above.
+			// However, bubbletea keys like "enter", "up", etc are separate from runes.
+			// We only want to forward runes or specific control keys.
+			if msg.Type == tea.KeyRunes || msg.Type == tea.KeySpace {
+				sess := m.consoleView.session.(*console.Session)
+				return m, sendConsoleDataCmd(sess, []byte(msg.String()))
+			} else if msg.Type == tea.KeyEnter {
+				// Enter is handled in separate case "enter" below...
+				// Wait, "enter" case below is for navigation/selection.
+				// If session is active, "enter" should be forwarded!
+				// I need to modify the "enter" case to forward if session is active.
+			}
+		}
+
 	case "up", "k":
+		if m.mode == ViewConsole && m.layer == LayerView {
+			if m.consoleView != nil && len(m.consoleView.ports) > 0 && m.consoleView.session == nil {
+				count := len(m.consoleView.ports)
+				m.consoleView.selectedPort = (m.consoleView.selectedPort - 1 + count) % count
+			}
+			return m, nil
+		}
 		if m.layer == LayerInterface {
 			displayCount := len(m.interfaces)
 			if displayCount > 8 {
@@ -574,6 +969,13 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 	case "down", "j":
+		if m.mode == ViewConsole && m.layer == LayerView {
+			if m.consoleView != nil && len(m.consoleView.ports) > 0 && m.consoleView.session == nil {
+				count := len(m.consoleView.ports)
+				m.consoleView.selectedPort = (m.consoleView.selectedPort + 1) % count
+			}
+			return m, nil
+		}
 		if m.layer == LayerInterface {
 			displayCount := len(m.interfaces)
 			if displayCount > 8 {
@@ -618,9 +1020,40 @@ func (m Model) handleKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				m.modeIndex = 0
 				m.statusMsg = "Select a mode"
 			}
+		} else if m.layer == LayerMode {
+			idx := int(msg.Runes[0]-'0') - 1
+			modes := m.availableModes()
+			if idx >= 0 && idx < len(modes) {
+				sel := modes[idx]
+				m = m.activateMode(sel.mode)
+				m.layer = LayerView
+				logging.Infof("digit %s -> activate mode %v", msg.String(), sel.mode)
+
+				// Trigger extended details if entering Details view
+				if sel.mode == ViewDetails && m.selectedIface != "" {
+					return m, getExtendedDetailsCmd(m.selectedIface)
+				}
+			}
 		}
 
 	case "enter":
+		if m.mode == ViewConsole && m.layer == LayerView {
+			// If session is active, forward Enter
+			if m.consoleView != nil && m.consoleView.session != nil {
+				sess := m.consoleView.session.(*console.Session)
+				// Send CR (or CRLF depending on config, but usually CR)
+				return m, sendConsoleDataCmd(sess, []byte("\r"))
+			}
+
+			// Connect to selected port
+			if m.consoleView != nil && len(m.consoleView.ports) > 0 && m.consoleView.session == nil {
+				port := m.consoleView.ports[m.consoleView.selectedPort].(console.SerialPort)
+				m.consoleView.statusMessage = fmt.Sprintf("Connecting to %s...", port.Path)
+				return m, openConsoleSessionCmd(context.Background(), port.Path, 115200) // Default baud
+			}
+			return m, nil
+		}
+
 		if m.layer == LayerInterface {
 			// Select the currently highlighted interface
 			displayCount := len(m.interfaces)
@@ -688,10 +1121,36 @@ func (m Model) View() string {
 	case LayerMode:
 		return m.renderModeMenu()
 	case LayerView:
-		return lipgloss.JoinVertical(lipgloss.Left,
+		content := lipgloss.JoinVertical(lipgloss.Left,
 			m.renderContent(),
 			m.renderStatus(),
 		)
+		if m.inputActive {
+			// Overlay input box
+			inputStyle := lipgloss.NewStyle().
+				Border(lipgloss.RoundedBorder()).
+				Padding(1, 2).
+				BorderForeground(lipgloss.Color("63"))
+
+			inputBox := inputStyle.Render(fmt.Sprintf("%s\n%s_", m.inputPrompt, m.inputValue))
+
+			// Center the input box (rough approximation)
+			return lipgloss.Place(m.width, m.height,
+				lipgloss.Center, lipgloss.Center,
+				inputBox,
+				lipgloss.WithWhitespaceChars(" "),
+				// lipgloss.WithWhitespaceForeground(lipgloss.NoColor), // Removed to fix type error
+			)
+		} else if m.helpActive {
+			// Overlay Help
+			helpBox := m.renderHelp()
+			return lipgloss.Place(m.width, m.height,
+				lipgloss.Center, lipgloss.Center,
+				helpBox,
+				lipgloss.WithWhitespaceChars(" "),
+			)
+		}
+		return content
 	default:
 		return m.renderPicker()
 	}
@@ -729,13 +1188,23 @@ func (m Model) renderPicker() string {
 		txMB := float64(iface.BytesTx) / 1024 / 1024
 
 		status := "UP  "
+		statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("10")) // Green
 		if iface.Flags&net.FlagUp == 0 {
 			status = "DOWN"
+			statusStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("9")) // Red
 		}
+		statusStr := statusStyle.Render(status)
 
 		// Line 1: Number, name, status, IP (fixed width alignment)
 		// Total width inside ║ ║ is 66 chars
-		line1 := fmt.Sprintf("%d. %-8s [%s]  %s", i+1, iface.Name, status, ipAddr)
+		// Note: We construct string first to calculate padding, then inject colored status
+		line1Raw := fmt.Sprintf("%d. %-8s [%s]  %s", i+1, iface.Name, status, ipAddr)
+		padding := 63 - len(line1Raw)
+		if padding < 0 {
+			padding = 0
+		}
+
+		line1 := fmt.Sprintf("%d. %-8s [%s]  %s%s", i+1, iface.Name, statusStr, ipAddr, strings.Repeat(" ", padding))
 		marker := ' '
 		if i == m.selectedIndex {
 			marker = '>'
@@ -766,8 +1235,8 @@ func (m Model) availableModes() []struct {
 	}{
 		{"[d] Details", ViewDetails},
 		{"[g] Diagnose", ViewDiagnose},
-		{"[v] VLAN", ViewVLAN},
-		{"[n] Snap", ViewSnap},
+		{"[v] VLAN [WIP]", ViewVLAN},
+		{"[n] Snap [WIP]", ViewSnap},
 		{"[s] Settings", ViewSettings},
 		{"[c] Capture", ViewCapture},
 		{"[a] Audit", ViewAudit},
@@ -901,6 +1370,8 @@ func (m Model) renderContent() string {
 		return m.renderSpeedtestView()
 	case ViewConsole:
 		return m.renderConsoleView()
+	case ViewLLDP:
+		return m.renderLLDPView()
 	default:
 		return "Unknown view"
 	}
@@ -917,7 +1388,7 @@ func (m Model) renderDetailsView() string {
 		linkStatus = "UP"
 	}
 
-	s += fmt.Sprintf("═══ Interface Details ═══\n\n")
+	s += "═══ Interface Details ═══\n\n"
 	s += fmt.Sprintf("Interface:  %s\n", m.details.Name)
 	s += fmt.Sprintf("MAC:        %s\n", m.details.MAC)
 	s += fmt.Sprintf("MTU:        %d bytes\n", m.details.MTU)
@@ -941,7 +1412,7 @@ func (m Model) renderDetailsView() string {
 		s += "  No IP addresses configured\n"
 	}
 
-	s += fmt.Sprintf("\n═══ Network ═══\n")
+	s += "\n═══ Network ═══\n"
 	if m.details.DefaultGateway != "" {
 		s += fmt.Sprintf("Gateway:    %s\n", m.details.DefaultGateway)
 	} else {
@@ -957,7 +1428,7 @@ func (m Model) renderDetailsView() string {
 		s += "  None configured\n"
 	}
 
-	s += fmt.Sprintf("\n═══ Traffic Statistics ═══\n")
+	s += "\n═══ Traffic Statistics ═══\n"
 	s += fmt.Sprintf("RX: %s (%s packets)\n",
 		formatBytes(m.details.BytesRx),
 		formatNumber(m.details.PacketsRx))
@@ -1085,8 +1556,8 @@ func (m Model) renderSettingsView() string {
 	var s string
 	s += "Settings\n\n"
 	s += fmt.Sprintf("DNS Alternates: %v\n", m.config.DNSAlternates)
-	s += fmt.Sprintf("Diagnostics Timeout: %dms\n", m.config.DiagnosticsTimeout)
-	s += fmt.Sprintf("Redact Mode: %v\n", m.config.Redact)
+	s += fmt.Sprintf("Diagnostics Timeout: %dms (press 't' to cycle)\n", m.config.DiagnosticsTimeout)
+	s += fmt.Sprintf("Redact Mode: %v (press 'r' to toggle)\n", m.config.Redact)
 	return s
 }
 
@@ -1105,13 +1576,38 @@ func (m Model) renderCaptureView() string {
 			count = m.captureSession.GetPacketCount()
 		}
 		s += fmt.Sprintf("Packets captured: %d\n\n", count)
-		s += "Press 'x' to stop capture\n"
+		s += "Press 'x' to stop capture\n\n"
 	} else {
 		s += "Commands:\n"
 		s += "  's' - Start capture (requires sudo/root)\n"
+		if m.captureSession != nil && m.captureSession.GetPacketCount() > 0 {
+			s += "  'w' - Save capture to PCAP file\n"
+		}
 		s += "  'f' - Set BPF filter\n"
-		s += "\nNote: Packet capture requires root privileges.\n"
+		s += "\nNote: Packet capture requires root privileges.\n\n"
 	}
+
+	// Show packet list
+	s += "Last Packets:\n"
+	s += "──────────────────────────────────────────────────────────────\n"
+	if m.captureSession != nil {
+		packets := m.captureSession.GetPackets()
+		start := len(packets) - 15
+		if start < 0 {
+			start = 0
+		}
+		for i := start; i < len(packets); i++ {
+			p := packets[i]
+			ts := p.Timestamp.Format("15:04:05.000")
+			info := p.Info
+			if len(info) > 30 {
+				info = info[:27] + "..."
+			}
+			s += fmt.Sprintf("[%s] %s -> %s (%s) %s\n",
+				ts, p.SourceIP, p.DestIP, p.Protocol, info)
+		}
+	}
+	s += "──────────────────────────────────────────────────────────────\n"
 
 	return s
 }
@@ -1245,7 +1741,18 @@ func (m Model) renderConsoleView() string {
 			s += "\nNo serial ports found.\n"
 			s += "\nPress 'f' to refresh port list\n"
 		} else {
-			s += "\n(Port discovery and selection placeholder)\n"
+			s += "\n"
+			for i, p := range m.consoleView.ports {
+				port, ok := p.(console.SerialPort)
+				if !ok {
+					continue
+				}
+				marker := " "
+				if i == m.consoleView.selectedPort {
+					marker = ">"
+				}
+				s += fmt.Sprintf(" %s %s (%s)\n", marker, port.Path, port.FriendlyName)
+			}
 			s += "\nCommands:\n"
 			s += "  'p' - Probe selected port\n"
 			s += "  'enter' - Open session\n"
@@ -1380,6 +1887,17 @@ func Run() error {
 	}
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
+
+	// Panic recovery
+	defer func() {
+		if r := recover(); r != nil {
+			p.ReleaseTerminal()
+			fmt.Printf("LanAudit crashed: %v\n", r)
+			logging.Errorf("PANIC: %v", r)
+			os.Exit(1)
+		}
+	}()
+
 	_, err = p.Run()
 	return err
 }
@@ -1420,6 +1938,17 @@ func RunWithInterface(ifaceName string) error {
 	}
 
 	p := tea.NewProgram(model, tea.WithAltScreen())
+
+	// Panic recovery
+	defer func() {
+		if r := recover(); r != nil {
+			p.ReleaseTerminal()
+			fmt.Printf("LanAudit crashed: %v\n", r)
+			logging.Errorf("PANIC: %v", r)
+			os.Exit(1)
+		}
+	}()
+
 	_, err = p.Run()
 	return err
 }
@@ -1450,4 +1979,201 @@ func getExtendedDetailsCmd(iface string) tea.Cmd {
 		speed, ifaceType, err := netpkg.GetExtendedInterfaceDetails(iface)
 		return extendedDetailsMsg{speed: speed, ifaceType: ifaceType, err: err}
 	}
+}
+
+func startCaptureCmd(iface, filter string) tea.Cmd {
+	return func() tea.Msg {
+		if !netpkg.HasPcapPermissions() {
+			return startCaptureMsg{err: fmt.Errorf("root/sudo permissions required for packet capture")}
+		}
+		_, err := capture.Start(iface, filter, 1000) // Limit to 1000 packets for TUI safety
+		return startCaptureMsg{err: err}
+	}
+}
+
+func stopCaptureCmd() tea.Cmd {
+	return func() tea.Msg {
+		err := capture.StopCurrentSession()
+		return stopCaptureMsg{err: err}
+	}
+}
+
+func saveCaptureCmd(filename string) tea.Cmd {
+	return func() tea.Msg {
+		session := capture.GetCurrentSession()
+		if session == nil {
+			return saveCaptureMsg{filename: filename, err: fmt.Errorf("no active session")}
+		}
+		err := session.SaveToPCAP(filename)
+		return saveCaptureMsg{filename: filename, err: err}
+	}
+}
+
+func runAuditCmd(gateway string) tea.Cmd {
+	return func() tea.Msg {
+		if gateway == "" {
+			return auditResultMsg{err: fmt.Errorf("no gateway configured")}
+		}
+		// Use real audit with fast timeout (500ms per host)
+		res, err := scan.AuditGateway(gateway, nil, 500*time.Millisecond)
+		return auditResultMsg{result: res, err: err}
+	}
+}
+
+func runLLDPCmd(iface string, duration time.Duration) tea.Cmd {
+	return func() tea.Msg {
+		neighbors, err := netpkg.DiscoverLLDP(iface, duration)
+		return lldpResultMsg{neighbors: neighbors, err: err}
+	}
+}
+
+func discoverPortsCmd() tea.Cmd {
+	return func() tea.Msg {
+		ports, err := console.DiscoverPorts()
+		return consolePortsMsg{ports: ports, err: err}
+	}
+}
+
+func openConsoleSessionCmd(ctx context.Context, port string, baud int) tea.Cmd {
+	return func() tea.Msg {
+		cfg := console.DefaultSessionConfig(port, baud)
+		sess, err := console.NewSession(ctx, cfg)
+		return consoleSessionMsg{session: sess, err: err}
+	}
+}
+
+func closeConsoleSessionCmd(sess *console.Session) tea.Cmd {
+	return func() tea.Msg {
+		sess.Close()
+		return nil
+	}
+}
+
+func probePortCmd(ctx context.Context, port string) tea.Cmd {
+	return func() tea.Msg {
+		res := console.QuickProbe(port)
+		return consoleProbeMsg{result: res}
+	}
+}
+
+func readConsoleDataCmd(sess *console.Session) tea.Cmd {
+	return func() tea.Msg {
+		select {
+		case data := <-sess.ReadChan():
+			return consoleDataMsg{data: data}
+		case err := <-sess.ErrorChan():
+			return err
+		case <-time.After(100 * time.Millisecond):
+			return nil
+		}
+	}
+}
+
+func sendConsoleDataCmd(sess *console.Session, data []byte) tea.Cmd {
+	return func() tea.Msg {
+		_, err := sess.Write(data)
+		if err != nil {
+			logging.Errorf("failed to write to console: %v", err)
+		}
+		return nil
+	}
+}
+
+func (m Model) renderHelp() string {
+	style := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		Padding(1, 2).
+		BorderForeground(lipgloss.Color("63"))
+
+	var s string
+	s += lipgloss.NewStyle().Bold(true).Render("Help") + "\n\n"
+	s += "General Navigation:\n"
+	s += "  Arrow Keys / hjkl : Navigate\n"
+	s += "  Enter             : Select / Activate\n"
+	s += "  Esc / q           : Back / Quit\n"
+	s += "  ?                 : Toggle Help\n\n"
+
+	s += "Context Commands:\n"
+	switch m.mode {
+	case ViewPicker, ViewDetails:
+		s += "  1-9 : Quick Select Interface\n"
+		s += "  d   : Refresh Details\n"
+	case ViewDiagnose:
+		s += "  r   : Run Diagnostics\n"
+	case ViewSettings:
+		s += "  r   : Toggle Redact Mode\n"
+		s += "  t   : Cycle Timeout\n"
+	case ViewCapture:
+		s += "  s   : Start Capture\n"
+		s += "  x   : Stop Capture\n"
+		s += "  w   : Save to PCAP\n"
+		s += "  f   : Set Filter\n"
+	case ViewAudit:
+		s += "  s   : Start Audit\n"
+	case ViewSpeedtest:
+		s += "  s   : Start Speedtest\n"
+		s += "  x   : Cancel Speedtest\n"
+	case ViewConsole:
+		s += "  f   : Refresh Ports\n"
+		s += "  p   : Probe Port\n"
+		s += "  Enter: Connect\n"
+		s += "  x   : Disconnect\n"
+		s += "  P   : Safe Probe (Active)\n"
+		s += "  A   : Toggle Config Probe\n"
+		s += "  Type to send to console\n"
+	}
+
+	return style.Render(s)
+}
+
+func (m Model) renderLLDPView() string {
+	if m.lldpView == nil {
+		return "LLDP view not initialized"
+	}
+
+	var s string
+	s += "═══ LLDP Neighbors ═══\n\n"
+	s += fmt.Sprintf("Status: %s\n\n", m.lldpView.statusMessage)
+
+	if m.lldpView.running {
+		s += "Listening for LLDP packets (30s timeout)...\n"
+		return s
+	}
+
+	if len(m.lldpView.neighbors) == 0 {
+		s += "No neighbors found.\n\n"
+		s += "Commands:\n"
+		s += "  's' - Start Discovery (requires sudo/root)\n"
+		return s
+	}
+
+	// Simple table
+	s += fmt.Sprintf("%-20s %-20s %-15s %-20s\n", "System Name", "Chassis ID", "Port ID", "Mgmt IP")
+	s += strings.Repeat("─", 80) + "\n"
+
+	for _, n := range m.lldpView.neighbors {
+		sysName := n.SystemName
+		if len(sysName) > 19 {
+			sysName = sysName[:19]
+		}
+		chassis := n.ChassisID
+		if len(chassis) > 19 {
+			chassis = chassis[:19]
+		}
+		port := n.PortID
+		if len(port) > 14 {
+			port = port[:14]
+		}
+		
+		s += fmt.Sprintf("%-20s %-20s %-15s %-20s\n", sysName, chassis, port, n.ManagementAddr)
+		
+		// Detailed info
+		s += fmt.Sprintf("  %s\n", n.SystemDesc)
+		if len(n.Capabilities) > 0 {
+			s += fmt.Sprintf("  Caps: %v\n", n.Capabilities)
+		}
+		s += "\n"
+	}
+
+	return s
 }

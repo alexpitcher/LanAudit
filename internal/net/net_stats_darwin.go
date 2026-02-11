@@ -19,7 +19,8 @@ type systemProfilerData struct {
 			CurrentNetwork *struct {
 				TransmitRate int `json:"spairport_network_rate"`
 			} `json:"spairport_current_network_information"`
-			CardType string `json:"spairport_card_type"`
+			CardType         string `json:"spairport_card_type"`
+			WirelessCardType string `json:"spairport_wireless_card_type"`
 		} `json:"spairport_airport_interfaces"`
 	} `json:"SPAirPortDataType"`
 }
@@ -38,9 +39,15 @@ func getExtendedInterfaceInfo(name string) (speed string, ifaceType string, err 
 			for _, item := range data.SPAirPortDataType {
 				for _, iface := range item.SPAirportInterfaces {
 					if iface.Name == name {
-						if iface.CardType == "Wi-Fi" {
+						// Check for Wi-Fi type (newer macOS uses spairport_wireless_card_type)
+						if iface.CardType == "Wi-Fi" || strings.Contains(strings.ToLower(iface.WirelessCardType), "wifi") {
 							ifaceType = "Wi-Fi"
 						}
+						// Fallback: if it's in this list, it's likely Wi-Fi
+						if ifaceType == "Unknown" {
+							ifaceType = "Wi-Fi"
+						}
+
 						if iface.CurrentNetwork != nil && iface.CurrentNetwork.TransmitRate > 0 {
 							speed = fmt.Sprintf("%d Mbps", iface.CurrentNetwork.TransmitRate)
 						}

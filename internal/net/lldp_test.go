@@ -2,6 +2,7 @@ package net
 
 import (
 	"encoding/binary"
+	"strings"
 	"testing"
 	"time"
 )
@@ -102,11 +103,11 @@ func TestFormatLLDPNeighbor(t *testing.T) {
 	}
 
 	// Check that key information is present
-	if !contains(formatted, "test-switch") {
+	if !strings.Contains(formatted, "test-switch") {
 		t.Error("Formatted output should contain system name")
 	}
 
-	if !contains(formatted, "00:11:22:33:44:55") {
+	if !strings.Contains(formatted, "00:11:22:33:44:55") {
 		t.Error("Formatted output should contain chassis ID")
 	}
 }
@@ -143,10 +144,4 @@ func TestParseCapabilitiesEncoding(t *testing.T) {
 	if !foundBridge || !foundRouter {
 		t.Errorf("Expected Bridge and Router capabilities, got %v", result)
 	}
-}
-
-// Helper function to check if string contains substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		(len(s) > 0 && (s[0:len(substr)] == substr || contains(s[1:], substr))))
 }
